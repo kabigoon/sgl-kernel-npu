@@ -212,6 +212,23 @@ TORCH_LIBRARY_FRAGMENT(npu, m)
     m.def(
         "kv_compress_epilog(Tensor(a!) kv_compress_cache, Tensor x, Tensor slot_mapping, "
         "int quant_group_size, int quant_mode, bool round_scale_flag, int layout) -> ()");
+    m.def(
+        "kv_quant_sparse_attn_sharedkv(Tensor q, int kv_quant_mode, Tensor? ori_kv=None, "
+        "Tensor? cmp_kv=None, Tensor? ori_sparse_indices=None, Tensor? cmp_sparse_indices=None, "
+        "Tensor? ori_block_table=None, Tensor? cmp_block_table=None, Tensor? cu_seqlens_q=None, "
+        "Tensor? cu_seqlens_ori_kv=None, Tensor? cu_seqlens_cmp_kv=None, Tensor? seqused_q=None, "
+        "Tensor? seqused_kv=None, Tensor? sinks=None, Tensor? metadata=None, int tile_size=0, "
+        "int rope_head_dim=0, float softmax_scale=0.0, int cmp_ratio=0, int ori_mask_mode=4, "
+        "int cmp_mask_mode=3, int ori_win_left=127, int ori_win_right=0, str layout_q='BSND', "
+        "str layout_kv='PA_ND', bool return_softmax_lse=False) -> (Tensor attention_out, Tensor softmax_lse)");
+    m.def(
+        "kv_quant_sparse_attn_sharedkv_metadata_host(int num_heads_q, int num_heads_kv, int head_dim, "
+        "int kv_quant_mode, Tensor? cu_seqlens_q=None, Tensor? cu_seqlens_ori_kv=None, "
+        "Tensor? cu_seqlens_cmp_kv=None, Tensor? seqused_q=None, Tensor? seqused_kv=None, "
+        "int batch_size=0, int max_seqlen_q=0, int max_seqlen_kv=0, int ori_topk=0, "
+        "int cmp_topk=0, int tile_size=0, int rope_head_dim=0, int cmp_ratio=-1, "
+        "int ori_mask_mode=4, int cmp_mask_mode=3, int ori_win_left=127, int ori_win_right=0, "
+        "str layout_q='BSND', str layout_kv='PA_ND', bool has_ori_kv=True, bool has_cmp_kv=True) -> Tensor");
 #endif
 
 #ifdef BUILD_CATLASS_MODULE
@@ -349,6 +366,7 @@ TORCH_LIBRARY_IMPL(npu, PrivateUse1, m)
 
 #ifdef SGL_KERNEL_ENABLE_A5_ONLY_OPS
     m.impl("kv_compress_epilog", TORCH_FN(sglang::npu_kernel::kv_compress_epilog));
+    m.impl("kv_quant_sparse_attn_sharedkv", TORCH_FN(sglang::npu_kernel::kv_quant_sparse_attn_sharedkv));
 #endif
 
 #ifdef BUILD_CATLASS_MODULE
@@ -368,5 +386,9 @@ namespace {
 TORCH_LIBRARY_IMPL(npu, CPU, m)
 {
     m.impl("sparse_attn_sharedkv_metadata_host", TORCH_FN(sglang::npu_kernel::sparse_attn_sharedkv_metadata_host));
+#ifdef SGL_KERNEL_ENABLE_A5_ONLY_OPS
+    m.impl("kv_quant_sparse_attn_sharedkv_metadata_host",
+           TORCH_FN(sglang::npu_kernel::kv_quant_sparse_attn_sharedkv_metadata_host));
+#endif
 }
 }  // namespace
