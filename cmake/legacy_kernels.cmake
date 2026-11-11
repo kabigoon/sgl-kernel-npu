@@ -56,8 +56,6 @@ message(STATUS "SGL_KERNEL_ENABLE_A5_ONLY_OPS=${SGL_KERNEL_ENABLE_A5_ONLY_OPS} (
 set(OP_SRCS
     ${PROJECT_OP_SRC_BASE}/pytorch_extensions.cpp
     ${PROJECT_OP_SRC_BASE}/helloworld/op_host/helloworld.cpp
-    # 教学例子（learn/sparse-flash-mla 分支专用，不在 feat 分支里）
-    ${PROJECT_SOURCE_DIR}/teaching/01_mmad_basic/op_host/mmad_basic.cpp
     ${PROJECT_OP_SRC_BASE}/cache_location_assign/op_host/cache_loc_assign.cpp
     ${PROJECT_OP_SRC_BASE}/alloc_extend/op_host/alloc_extend_tiling.cpp
     ${PROJECT_OP_SRC_BASE}/assign_cache_op/op_host/assign_cache.cpp
@@ -142,8 +140,6 @@ endif()
 # kernel side files without workspace
 set(NO_WORKSPACE_KERNEL_SRCS
     ${PROJECT_OP_SRC_BASE}/helloworld/op_kernel/kernel_helloworld.cpp
-    # 教学例子（learn/sparse-flash-mla 分支专用，不在 feat 分支里）
-    ${PROJECT_SOURCE_DIR}/teaching/01_mmad_basic/op_kernel/mmad_basic_kernel.cpp
     ${PROJECT_OP_SRC_BASE}/cache_location_assign/op_kernel/cache_loc_assign_kernel.cpp
     ${PROJECT_OP_SRC_BASE}/assign_cache_op/op_kernel/assign_cache_op.cpp
     ${PROJECT_OP_SRC_BASE}/lora/op_kernel/bgmv_expand_kernel.cpp

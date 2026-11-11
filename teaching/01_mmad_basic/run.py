@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """教学例子 01：一条 Mmad 到底干了什么。
 
-调用流程和仓库里其它算子完全一致（也就是 SGLang 的调用形状）：
+调用流程和仓库里其它算子（含 sparse_flash_mla）完全一致：
 
     import sgl_kernel_npu                 -> dlopen libsgl_kernel_npu.so
-    torch.ops.npu.mmad_basic(a, b)        -> host 侧 EXEC_KERNEL_CMD
-                                          -> 设备侧 mmad_basic kernel
+    torch.ops.npu.mmad_basic(a, b)        -> torch_adapter.cpp
+                                          -> aclnnSglTeaching（vendor 里的算子包）
+                                          -> host tiling：blockDim = 1
+                                          -> 设备侧 sgl_teaching kernel
                                           -> 一条 16x16x16 的 Mmad
 
 在 NPU 机器上跑：

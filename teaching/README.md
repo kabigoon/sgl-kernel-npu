@@ -12,53 +12,58 @@
 | 03 | `03_mmad_shapes/` | M/N 非 16 倍数、多 fractal、stride 与大 tile | 待加 |
 | 04 | `04_cube_vector/` | cube 出分数块 → GM workspace → vector 做 softmax（sparse_flash_mla 的骨架） | 待加 |
 
-## 调用流程（与 SGLang 一致）
+## 一个例子的最小构成
 
-```
-python:  import sgl_kernel_npu            # dlopen libsgl_kernel_npu.so，注册 torch.ops.npu.*
-         torch.ops.npu.<op>(tensors...)   # host 侧函数
-host:    EXEC_KERNEL_CMD(<kernel>, blk, tensors...)   # ACLRT_LAUNCH_KERNEL
-device:  extern "C" __global__ __aicore__ void <kernel>(GM_ADDR ...)   # AscendC kernel
-```
-
-这条链路和 `csrc/helloworld` 完全一样，是仓库里**最短的 Python→kernel 路径**（没有 aclnn、没有 tiling）。
-真实算子 `sparse_flash_mla` 多出来的部分（opdef、tiling、aclnn、metadata）都是围绕"尺寸不能写死"展开的。
-
-## 怎么加一个例子（三个文件 + 两行 CMake）
+教学例子走的是仓库**正式**的加算子通道（和 `apply_token_bitmask` 一样），因为这正是
+`sparse_flash_mla` 被接进 wheel 的方式：
 
 ```
 teaching/NN_xxx/
-├── op_kernel/xxx_kernel.cpp   # extern "C" __global__ __aicore__ void xxx(GM_ADDR ...)
-├── op_host/xxx.cpp            # EXEC_KERNEL_CMD(xxx, blockDim, ...) + TORCH_LIBRARY_FRAGMENT(np)
-└── run.py                     # torch.ops.npu.xxx(...)
+├── op_host/xxx_op.cpp        # 一个文件三个角色：opdef + infershape + tiling
+├── op_host/torch_adapter.cpp # aclnn -> torch.ops.npu.xxx
+├── op_kernel/xxx_kernel.cpp  # extern "C" __global__ __aicore__ void sgl_teaching(...)
+└── run.py                    # torch.ops.npu.xxx(...)
 ```
 
-然后在 `cmake/legacy_kernels.cmake` 两处列表各加一行（host / kernel）：
-
-```cmake
-${PROJECT_SOURCE_DIR}/teaching/NN_xxx/op_host/xxx.cpp
-${PROJECT_SOURCE_DIR}/teaching/NN_xxx/op_kernel/xxx_kernel.cpp
+```
+python:  import sgl_kernel_npu            # dlopen libsgl_kernel_npu.so（里面有各算子的 adapter）
+         torch.ops.npu.xxx(...)           # adapter
+host:    aclnnSglTeachingGetWorkspaceSize -> TilingMmadBasic（算 blockDim / workspace）
+         -> vendor 里的 aclnnSglTeaching
+device:  sgl_teaching kernel（AscendC）
 ```
 
-kernel 里的函数名 `xxx` 决定生成的启动头文件名 `aclrtlaunch_xxx.h`，三者必须一致。
+kernel 的入口函数名必须是 **OpType 的 snake_case**（`SglTeaching` → `sgl_teaching`），
+msopgen 靠这个名字把 opdef 和 kernel 配起来；参数是 `(输入..., 输出..., workspace, tiling)`。
+
+## 为什么所有例子共用一个算子 ID
+
+CANN 与 torch 两级的构建缓存都是拿 `--ops` 的选择串当 key（`build_tools/cann.py:154`），
+多注册一个 ID 就必须 `--make-clean` 全量重来。所以：
+
+- 只注册一个算子：ID `teaching` / OpType `SglTeaching`
+- 声明在 `csrc/examples/teaching/CMakeLists.txt`（只指路，源文件都在 `teaching/` 下）
+- **换例子 = 改那 4 个源文件路径**，选择串保持 `apply_token_bitmask,teaching` 不变
+- 一次只激活一个例子（同一个 ID 不能有两个实现）
 
 ## 构建 & 运行（在 NPU 机器上）
 
 ```bash
 cd /home/a00821909/sgl-kernel-npu
 git fetch origin && git switch learn/sparse-flash-mla && git pull
-
-# 编译（首次 10~40 min；之后只是增量重编 teaching/ 下的文件 + 重链，通常 1~3 min）
 source /usr/local/Ascend/ascend-toolkit/set_env.sh
-python3 setup.py --arch-version 2201 --ops apply_token_bitmask -j 16
 
-# 装 wheel（必须 no-index no-deps）
+# 第一次切到新选择串（apply_token_bitmask -> apply_token_bitmask,teaching）必须清缓存
+python3 setup.py --make-clean
+python3 setup.py --arch-version 2201 --ops apply_token_bitmask,teaching -j 16
+
 pip install --no-index --no-deps --force-reinstall output/sgl_kernel_npu-*.whl
 
-# 跑
 python3 teaching/01_mmad_basic/run.py
 ```
 
-> 只关心教学例子时可以用 `--without-third-party` 跳过第三方 vendor（更快），
-> 但这样打出的 wheel 里没有 `_third_party/sgl_ops_transformer`，`sparse_flash_mla` 会不可用。
-> 两者别混着装。
+之后再改 `teaching/` 下的文件，**不需要再 `--make-clean`**，直接重跑 `setup.py`（它内部
+`cmake --build` 会按源码时间戳增量重编，vendor 包和 torch 扩展都会更新）→ 重装 wheel → 跑。
+
+> `--make-clean` 只清 `build/cann`、`build/torch`、`build/wheel`；`build/third_party` 的
+> 第三方缓存（`tp...`）会保留，所以第三方那一段是缓存命中，不是 10~40 分钟。

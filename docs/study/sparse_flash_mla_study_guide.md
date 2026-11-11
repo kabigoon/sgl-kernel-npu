@@ -402,8 +402,8 @@ decode 时靠 64 个 head 共享 K tile 把强度拉回 ~26 FLOP/B，但并行�
 
 ### 9.3 教学例子（`teaching/`，本分支新增）
 
-从"读代码"切到"上机看实感"。例子放在仓库根 `teaching/`，**不在 `csrc/` 里**，
-只在 `cmake/legacy_kernels.cmake` 的 host / kernel 两个列表各加一行路径。
+从"读代码"切到"上机看实感"。源文件都在仓库根 `teaching/`；`csrc/examples/teaching/CMakeLists.txt`
+只是一份"指路"的算子声明（ID `teaching` / OpType `SglTeaching`），源文件仍然留在 `teaching/` 下。
 
 | 级别 | 目录 | 概念 | 状态 |
 |---|---|---|---|
@@ -412,14 +412,29 @@ decode 时靠 64 个 head 共享 K tile 把强度拉回 ~26 FLOP/B，但并行�
 | 03 | `teaching/03_mmad_shapes` | M/N 非 16 倍数、多 fractal、stride | 待加 |
 | 04 | `teaching/04_cube_vector` | cube→GM workspace→vector 的软流水（sparse_flash_mla 骨架） | 待加 |
 
-调用流程与 SGLang 一致（复用 `csrc/helloworld` 的最短链路，无 aclnn / 无 tiling）：
+调用链与正式算子一致（这也是 sparse_flash_mla 进 wheel 的方式）：
 
 ```
-torch.ops.npu.<op>  ->  EXEC_KERNEL_CMD  ->  extern "C" __global__ __aicore__ kernel
+torch.ops.npu.<op> -> torch_adapter -> aclnn -> host tiling -> device kernel
 ```
 
-构建/运行命令见 `teaching/README.md`：`setup.py --arch-version 2201 --ops apply_token_bitmask -j 16`
-→ `pip install --no-index --no-deps` → `python3 teaching/01_mmad_basic/run.py`。
+**关键教训（踩过一次）**：`cmake/legacy_kernels.cmake` 只服务于老的 `build.sh`
+（`BUILD_KERNELS_MODULE=ON`）。`setup.py` 的 wheel 由 `csrc/aclnn_torch_adapter/CMakeLists.txt`
+构建，它**只编译被 `--ops` 选中算子的 `TORCH_ADAPTER`**，根本不 include legacy 列表。
+所以往 legacy 列表加东西 → 编不进 wheel → `torch.ops.npu.xxx` 报 no attribute。
+
+**所有教学例子共用一个算子 ID**：CANN / torch 两级构建缓存都以 `--ops` 选择串为 key
+（`build_tools/cann.py:154`、`torch_wheel.py:57`），新增 ID 就要 `--make-clean` 全量重来。
+换例子只改声明文件里的 4 个源路径，选择串恒为 `apply_token_bitmask,teaching`。
+
+构建/运行（首次需清缓存）：
+
+```bash
+python3 setup.py --make-clean
+python3 setup.py --arch-version 2201 --ops apply_token_bitmask,teaching -j 16
+pip install --no-index --no-deps --force-reinstall output/sgl_kernel_npu-*.whl
+python3 teaching/01_mmad_basic/run.py
+```
 
 ### 9.4 待办事项
 

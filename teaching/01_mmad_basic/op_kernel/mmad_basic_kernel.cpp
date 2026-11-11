@@ -189,9 +189,15 @@ private:
 
 } // namespace
 
-// 设备侧入口：名字叫 mmad_basic，CMake 会据此生成 aclrtlaunch_mmad_basic.h
-extern "C" __global__ __aicore__ void mmad_basic(GM_ADDR a, GM_ADDR b, GM_ADDR c)
+// 设备侧入口。
+//   - 名字必须是 OpType 的 snake_case（SglTeaching -> sgl_teaching），msopgen 靠它配对
+//   - 前三个参数按 opdef 的输入/输出顺序；后两个是框架固定追加的 workspace / tiling
+//   - 例子 01 的尺寸写死，所以两者都不用（tiling 只用来传 blockDim，已在 host 侧消费）
+extern "C" __global__ __aicore__ void sgl_teaching(GM_ADDR a, GM_ADDR b, GM_ADDR c, GM_ADDR workspace,
+                                                   GM_ADDR tiling)
 {
+    (void)workspace;
+    (void)tiling;
     MmadBasicKernel op;
     op.Init(a, b, c);
     op.Process();
