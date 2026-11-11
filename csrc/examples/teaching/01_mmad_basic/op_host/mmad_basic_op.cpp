@@ -62,8 +62,8 @@ static ge::graphStatus InferShape(gert::InferShapeContext *context)
         return ge::GRAPH_FAILED;
     }
     gert::Shape outShape;
-    outShape.AppendDim(a->GetDim(0));  // M
-    outShape.AppendDim(b->GetDim(1));  // N
+    outShape.AppendDim(a->GetDim(0));  // M = A 的行
+    outShape.AppendDim(b->GetDim(0));  // N = B 的行（B 是 [N,K]）
     *c = outShape;
     return ge::GRAPH_SUCCESS;
 }
@@ -76,7 +76,8 @@ static ge::graphStatus InferDataType(gert::InferDataTypeContext *context)
 }
 
 // ---- 角色 1：算子原型 -------------------------------------------------------
-// 输入 a[M,K]、b[K,N]，输出 c[M,N]。注意 dtype 列表长度必须一致：
+// 输入 a[M,K]（fp16）、b[N,K]（fp16），输出 c[M,N]（fp32）：C = A·Bᵀ。
+// 注意 dtype 列表长度必须一致：
 // 这里只声明一种组合（fp16 → fp32），想加 bf16 就要在每个列表里补一项。
 class SglTeaching : public OpDef
 {

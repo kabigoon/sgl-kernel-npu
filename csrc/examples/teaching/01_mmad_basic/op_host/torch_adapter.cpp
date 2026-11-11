@@ -21,12 +21,13 @@ at::Tensor mmad_basic(const at::Tensor &a, const at::Tensor &b)
     TORCH_CHECK(b.device() == a.device(), "inputs must be on the same NPU");
     TORCH_CHECK(a.scalar_type() == at::kHalf && b.scalar_type() == at::kHalf, "inputs must be fp16");
     TORCH_CHECK(a.dim() == 2 && b.dim() == 2, "inputs must be 2D");
-    TORCH_CHECK(a.size(1) == b.size(0), "K mismatch: a is [M,K], b is [K,N]");
+    TORCH_CHECK(a.size(1) == b.size(1), "K mismatch: a is [M,K], b is [N,K]");
     TORCH_CHECK(a.is_contiguous() && b.is_contiguous(), "inputs must be contiguous");
 
     const c10::DeviceGuard guard(a.device());
+    // C = A·Bᵀ -> [M, N] = [A 的行数, B 的行数]
     at::Tensor c = at_npu::native::empty_with_format(
-        {a.size(0), b.size(1)}, a.options().dtype(at::kFloat), ACL_FORMAT_ND, true);
+        {a.size(0), b.size(0)}, a.options().dtype(at::kFloat), ACL_FORMAT_ND, true);
 
     static auto query = reinterpret_cast<decltype(&aclnnSglTeachingGetWorkspaceSize)>(
         sgl_cann::op_api_symbol("aclnnSglTeachingGetWorkspaceSize"));

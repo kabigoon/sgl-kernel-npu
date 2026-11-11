@@ -1,6 +1,11 @@
 // 教学例子 01：一条 Mmad 到底干了什么
 //
-//   C[16,16](fp32) = A[16,16](fp16) @ B[16,16](fp16)
+//   C[16,16](fp32) = A[16,16](fp16) @ B[16,16](fp16)^T
+//
+// 注意 B 的方向：两个输入都是 [行, K] 布局（A 是 [M,K]，B 是 [N,K]）。
+// 这不是接口癖好，是 cube 的硬约束 —— L0A/L0B 的分形里 K 都在最里层（C0=16），
+// 所以 L0B 拿到的必须是"转置着放"的 B。attention 里 Q[M,D] 与 KV[S2,D] 天生如此，
+// 一次 Mmad 直接得到 Q·Kᵀ；反过来，如果你按数学课本的 [K,N] 摆 B，算出来就是 A·Bᵀ。
 //
 // 整条数据通路就是 Mmad 的五个阶段，缺一不可：
 //
@@ -82,13 +87,14 @@ private:
         pa.dstNzMatrixStride = 0;
         DataCopy(a1, aGm_, pa);
 
+        // B 是 [N, K]：行 = N，列 = K（K 在最里层，正好对上 L0B 的分形方向）
         LocalTensor<half> b1 = b1Buf_.Get<half>();
         Nd2NzParams pb;
         pb.ndNum = 1;
-        pb.nValue = TILE_K;        // 16 行（B 的行是 K）
-        pb.dValue = TILE_N;        // 每行 16 列（B 的列是 N）
-        pb.srcDValue = TILE_N;
-        pb.dstNzC0Stride = TILE_K;
+        pb.nValue = TILE_N;        // 16 行 = N
+        pb.dValue = TILE_K;        // 每行 16 列 = K
+        pb.srcDValue = TILE_K;     // GM 里行间隔 = K 个元素
+        pb.dstNzC0Stride = TILE_N; // L1 里一个 C0 块跨 N 行
         pb.dstNzNStride = 1;
         pb.srcNdMatrixStride = 0;
         pb.dstNzMatrixStride = 0;
@@ -130,7 +136,7 @@ private:
         ldA.channelSize = TILE_K;
         LoadData<half, LOAD3D_CFG>(a2, a1, ldA);
 
-        // B：从 L1 的 nZ 直接按 16x16 fractal 搬进 L0B
+        // B：从 L1 的 nZ 直接按 16x16 fractal 搬进 L0B（K 在里层，无需转置）
         LoadData2DParams ldB;
         ldB.startIndex = 0;
         ldB.repeatTimes = (TILE_N / 16) * (TILE_K / 16); // 1 个 fractal

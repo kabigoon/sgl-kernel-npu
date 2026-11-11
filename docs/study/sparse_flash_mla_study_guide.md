@@ -428,6 +428,13 @@ torch.ops.npu.<op> -> torch_adapter -> aclnn -> host tiling -> device kernel
 构建，它**只编译被 `--ops` 选中算子的 `TORCH_ADAPTER`**，根本不 include legacy 列表。
 所以往 legacy 列表加东西 → 编不进 wheel → `torch.ops.npu.xxx` 报 no attribute。
 
+**布局契约（第一次上机就撞上的坑）**：教学算子定义为 `C[M,N] = A[M,K]·B[N,K]ᵀ`，
+两个输入都是 `[行, K]`。因为 cube 的 L0A/L0B 分形里 K 都在最里层（C0=16），
+L0B 拿到的 B 天然是"转置着放"的；反过来按 `[K,N]` 摆，算出的是 `A·B`。
+这正是 attention 里 `Q[M,D]·KV[S2,D]ᵀ` 的形状 —— 不是巧合，是同一个约束。
+排查工具：`csrc/examples/teaching/01_mmad_basic/diagnose.py`
+（候选假设打分 + 单位矩阵探针，改 per-fractal 参数后先跑它）。
+
 **所有教学例子共用一个算子 ID**：CANN / torch 两级构建缓存都以 `--ops` 选择串为 key
 （`build_tools/cann.py:154`、`torch_wheel.py:57`），新增 ID 就要 `--make-clean` 全量重来。
 换例子只改声明文件里的 4 个源路径，选择串恒为 `apply_token_bitmask,teaching`。
