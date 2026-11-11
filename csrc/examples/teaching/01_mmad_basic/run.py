@@ -11,7 +11,7 @@
                                           -> 一条 16x16x16 的 Mmad
 
 在 NPU 机器上跑：
-    python3 teaching/01_mmad_basic/run.py
+    python3 csrc/examples/teaching/01_mmad_basic/run.py
 """
 
 import torch

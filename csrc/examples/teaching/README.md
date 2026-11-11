@@ -18,7 +18,7 @@
 `sparse_flash_mla` 被接进 wheel 的方式：
 
 ```
-teaching/NN_xxx/
+csrc/examples/teaching/NN_xxx/
 ├── op_host/xxx_op.cpp        # 一个文件三个角色：opdef + infershape + tiling
 ├── op_host/torch_adapter.cpp # aclnn -> torch.ops.npu.xxx
 ├── op_kernel/xxx_kernel.cpp  # extern "C" __global__ __aicore__ void sgl_teaching(...)
@@ -42,9 +42,14 @@ CANN 与 torch 两级的构建缓存都是拿 `--ops` 的选择串当 key（`bui
 多注册一个 ID 就必须 `--make-clean` 全量重来。所以：
 
 - 只注册一个算子：ID `teaching` / OpType `SglTeaching`
-- 声明在 `csrc/examples/teaching/CMakeLists.txt`（只指路，源文件都在 `teaching/` 下）
+- 声明在 `csrc/examples/teaching/CMakeLists.txt`
 - **换例子 = 改那 4 个源文件路径**，选择串保持 `apply_token_bitmask,teaching` 不变
 - 一次只激活一个例子（同一个 ID 不能有两个实现）
+
+**为什么源码在 `csrc/` 下而不是仓库根**：`csrc/cmake/cann_ops.cmake:198` 以 `csrc`
+为基准算 kernel 目录的相对路径，CANN 的 `ascendc_copy_kernel_src.py` 随后要把 kernel
+源码拷进 `autogen/`，它拒绝带 `..` 的路径（`Unsafe relative path`）。这是 CANN 的
+目录结构要求，绕不过去。
 
 ## 构建 & 运行（在 NPU 机器上）
 
@@ -59,10 +64,10 @@ python3 setup.py --arch-version 2201 --ops apply_token_bitmask,teaching -j 16
 
 pip install --no-index --no-deps --force-reinstall output/sgl_kernel_npu-*.whl
 
-python3 teaching/01_mmad_basic/run.py
+python3 csrc/examples/teaching/01_mmad_basic/run.py
 ```
 
-之后再改 `teaching/` 下的文件，**不需要再 `--make-clean`**，直接重跑 `setup.py`（它内部
+之后再改这里的文件，**不需要再 `--make-clean`**，直接重跑 `setup.py`（它内部
 `cmake --build` 会按源码时间戳增量重编，vendor 包和 torch 扩展都会更新）→ 重装 wheel → 跑。
 
 > `--make-clean` 只清 `build/cann`、`build/torch`、`build/wheel`；`build/third_party` 的

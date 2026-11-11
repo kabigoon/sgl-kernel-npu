@@ -68,7 +68,7 @@ source /usr/local/Ascend/ascend-toolkit/set_env.sh
 python3 setup.py --make-clean                                  # 仅首次：选择串变了
 python3 setup.py --arch-version 2201 --ops apply_token_bitmask,teaching -j 16
 pip install --no-index --no-deps --force-reinstall output/sgl_kernel_npu-*.whl
-python3 teaching/01_mmad_basic/run.py
+python3 csrc/examples/teaching/01_mmad_basic/run.py
 ```
 
 之后改例子只需重跑后三条（不要 `--make-clean`）。

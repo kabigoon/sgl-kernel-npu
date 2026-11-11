@@ -400,17 +400,22 @@ decode 时靠 64 个 head 共享 K tile 把强度拉回 ~26 FLOP/B，但并行�
 4. `arch22/*_block_cube.h` 与 `*_block_vector.h`：cube/vector 分工与 GM workspace 交换
 5. `Mmad` 层面的流水线（可选，按需）
 
-### 9.3 教学例子（`teaching/`，本分支新增）
+### 9.3 教学例子（`csrc/examples/teaching/`，本分支新增）
 
-从"读代码"切到"上机看实感"。源文件都在仓库根 `teaching/`；`csrc/examples/teaching/CMakeLists.txt`
-只是一份"指路"的算子声明（ID `teaching` / OpType `SglTeaching`），源文件仍然留在 `teaching/` 下。
+从"读代码"切到"上机看实感"。例子在 `csrc/examples/teaching/`，注册成一个正式算子
+（ID `teaching` / OpType `SglTeaching`），走 `opdef → tiling → kernel → aclnn → torch adapter`
+这条链——也就是 sparse_flash_mla 进 wheel 的同一条链。
+
+**为什么源码必须在 `csrc/` 下**：`csrc/cmake/cann_ops.cmake:198` 以 `csrc` 为基准算
+kernel 目录的相对路径，CANN 的 `ascendc_copy_kernel_src.py` 要把 kernel 源码拷进
+`autogen/`，它拒绝带 `..` 的路径（`Unsafe relative path`）。
 
 | 级别 | 目录 | 概念 | 状态 |
 |---|---|---|---|
-| 01 | `teaching/01_mmad_basic` | 一条 Mmad 的五个阶段（GM→L1→L0A/L0B→M→L0C→FIX→GM），16×16×16 | 代码完成，**待 NPU 验证** |
-| 02 | `teaching/02_mmad_k_loop` | K 分块累加：`cmatrixInitVal` / `unitFlag` | 待加 |
-| 03 | `teaching/03_mmad_shapes` | M/N 非 16 倍数、多 fractal、stride | 待加 |
-| 04 | `teaching/04_cube_vector` | cube→GM workspace→vector 的软流水（sparse_flash_mla 骨架） | 待加 |
+| 01 | `csrc/examples/teaching/01_mmad_basic` | 一条 Mmad 的五个阶段（GM→L1→L0A/L0B→M→L0C→FIX→GM），16×16×16 | 代码完成，**待 NPU 验证** |
+| 02 | `csrc/examples/teaching/02_mmad_k_loop` | K 分块累加：`cmatrixInitVal` / `unitFlag` | 待加 |
+| 03 | `csrc/examples/teaching/03_mmad_shapes` | M/N 非 16 倍数、多 fractal、stride | 待加 |
+| 04 | `csrc/examples/teaching/04_cube_vector` | cube→GM workspace→vector 的软流水（sparse_flash_mla 骨架） | 待加 |
 
 调用链与正式算子一致（这也是 sparse_flash_mla 进 wheel 的方式）：
 
@@ -433,7 +438,7 @@ torch.ops.npu.<op> -> torch_adapter -> aclnn -> host tiling -> device kernel
 python3 setup.py --make-clean
 python3 setup.py --arch-version 2201 --ops apply_token_bitmask,teaching -j 16
 pip install --no-index --no-deps --force-reinstall output/sgl_kernel_npu-*.whl
-python3 teaching/01_mmad_basic/run.py
+python3 csrc/examples/teaching/01_mmad_basic/run.py
 ```
 
 ### 9.4 待办事项
