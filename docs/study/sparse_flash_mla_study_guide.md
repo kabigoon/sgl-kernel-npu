@@ -400,7 +400,28 @@ decode 时靠 64 个 head 共享 K tile 把强度拉回 ~26 FLOP/B，但并行�
 4. `arch22/*_block_cube.h` 与 `*_block_vector.h`：cube/vector 分工与 GM workspace 交换
 5. `Mmad` 层面的流水线（可选，按需）
 
-### 9.3 待办事项
+### 9.3 教学例子（`teaching/`，本分支新增）
+
+从"读代码"切到"上机看实感"。例子放在仓库根 `teaching/`，**不在 `csrc/` 里**，
+只在 `cmake/legacy_kernels.cmake` 的 host / kernel 两个列表各加一行路径。
+
+| 级别 | 目录 | 概念 | 状态 |
+|---|---|---|---|
+| 01 | `teaching/01_mmad_basic` | 一条 Mmad 的五个阶段（GM→L1→L0A/L0B→M→L0C→FIX→GM），16×16×16 | 代码完成，**待 NPU 验证** |
+| 02 | `teaching/02_mmad_k_loop` | K 分块累加：`cmatrixInitVal` / `unitFlag` | 待加 |
+| 03 | `teaching/03_mmad_shapes` | M/N 非 16 倍数、多 fractal、stride | 待加 |
+| 04 | `teaching/04_cube_vector` | cube→GM workspace→vector 的软流水（sparse_flash_mla 骨架） | 待加 |
+
+调用流程与 SGLang 一致（复用 `csrc/helloworld` 的最短链路，无 aclnn / 无 tiling）：
+
+```
+torch.ops.npu.<op>  ->  EXEC_KERNEL_CMD  ->  extern "C" __global__ __aicore__ kernel
+```
+
+构建/运行命令见 `teaching/README.md`：`setup.py --arch-version 2201 --ops apply_token_bitmask -j 16`
+→ `pip install --no-index --no-deps` → `python3 teaching/01_mmad_basic/run.py`。
+
+### 9.4 待办事项
 
 - [ ] NPU 空闲时补性能数据（`--enable-perf=true --csv-path=...`，跑 2–3 次看波动）
 - [ ] 写 PR 描述（目标分支 `main`；附 4 个 A3 约束、6 用例结果）
