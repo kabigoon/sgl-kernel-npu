@@ -7,6 +7,7 @@
 #include "../op_kernel/mmad_basic_tiling.h"          // host 与 kernel 共享的 tiling 结构
 #include "register/op_def_registry.h"
 #include "sgl_operator_config.h"                    // 构建期生成的 SGL_CANN_CONFIGS
+#include "tiling/platform/platform_ascendc.h"         // gert::TilingContext / platform_ascendc
 
 #include <cstdint>
 
@@ -47,6 +48,8 @@ namespace ops
 {
 
 // ---- 角色 2：shape/dtype 推导 ------------------------------------------------
+// 注意：InferShape 里 GetInputShape() 直接返回 gert::Shape*，它自己就是 shape，
+// 没有 GetStorageShape()（那是 CompileTimeTensorDesc 那边的方法）。
 static ge::graphStatus InferShape(gert::InferShapeContext *context)
 {
     const auto *a = context->GetInputShape(0);
@@ -55,14 +58,13 @@ static ge::graphStatus InferShape(gert::InferShapeContext *context)
     if (a == nullptr || b == nullptr || c == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    const auto &sa = a->GetStorageShape();
-    const auto &sb = b->GetStorageShape();
-    if (sa.GetDimNum() != 2 || sb.GetDimNum() != 2) {
+    if (a->GetDimNum() != 2 || b->GetDimNum() != 2) {
         return ge::GRAPH_FAILED;
     }
-    c->SetDimNum(2);
-    c->SetDim(0, sa.GetDim(0));  // M
-    c->SetDim(1, sb.GetDim(1));  // N
+    gert::Shape outShape;
+    outShape.AppendDim(a->GetDim(0));  // M
+    outShape.AppendDim(b->GetDim(1));  // N
+    *c = outShape;
     return ge::GRAPH_SUCCESS;
 }
 

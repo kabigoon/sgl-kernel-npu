@@ -22,12 +22,14 @@ constexpr uint32_t TILE_M = 16;
 constexpr uint32_t TILE_N = 16;
 constexpr uint32_t TILE_K = 16;
 
-// isSetFMatrix / isSetPadding 都交给 LoadData 自己做（省掉手写 SetFmatrix）
-constexpr IsResetLoad3dConfig LOAD3D_CFG = {true, true};
+// isSetFMatrix / isSetPadding 都交给 LoadData 自己做（省掉手写 SetFmatrix），
+// 该常量放在类里当 static constexpr，和上游 kernel 的写法一致。
 
 class MmadBasicKernel
 {
 public:
+    static constexpr IsResetLoad3dConfig LOAD3D_CFG = {true, true}; // isSetFMatrix / isSetPadding
+
     __aicore__ inline MmadBasicKernel() {}
 
     __aicore__ inline void Init(GM_ADDR a, GM_ADDR b, GM_ADDR c)
