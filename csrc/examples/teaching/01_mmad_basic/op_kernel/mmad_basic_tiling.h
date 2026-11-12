@@ -2,7 +2,7 @@
 //
 // 例子 01 只需要一个字段（开几个核）；例子 02/03 会把它扩成
 // {mBase, nBase, kBase, loopCount...}，那时就能对照 sparse_flash_mla 的
-// SMLATilingData（60+ 字段）看出"tiling data = 给 device 传的一小包常量"。
+// SMLATilingData（48 个字段）看出"tiling data = 给 device 传的一小包常量"。
 #pragma once
 
 #include <cstdint>

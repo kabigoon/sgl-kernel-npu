@@ -9,7 +9,7 @@
 | `op_host/mmad_basic_op.cpp` | opdef + infershape + tiling（15 行的 tiling） | `sparse_flash_mla_def.cpp` / `_infershape.cpp` / `_tiling.cpp`(2682 行) |
 | `op_host/torch_adapter.cpp` | `torch.ops.npu.mmad_basic` → aclnn | 上游 Python 门面 + JIT shim |
 | `op_kernel/mmad_basic_kernel.cpp` | 真正跑在 AI Core 上的 5 段流水 | `arch22/sparse_flash_mla_*_block_cube.h` |
-| `op_kernel/mmad_basic_tiling.h` | host/kernel 共享的 tiling 结构（1 个字段） | `sparse_flash_mla_tiling.h`（60+ 字段） |
+| `op_kernel/mmad_basic_tiling.h` | host/kernel 共享的 tiling 结构（1 个字段） | `sparse_flash_mla_tiling.h`（48 个字段 / 540 行） |
 | `run.py` | 调用 + 对拍 | 测试用例 |
 | `diagnose.py` | 布局诊断（改完分形参数先跑它） | — |
 
