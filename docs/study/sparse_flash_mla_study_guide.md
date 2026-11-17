@@ -413,7 +413,7 @@ kernel 目录的相对路径，CANN 的 `ascendc_copy_kernel_src.py` 要把 kern
 | 级别 | 目录 | 概念 | 状态 |
 |---|---|---|---|
 | 01 | `csrc/examples/teaching/01_mmad_basic` | 一条 Mmad 的五个阶段（GM→L1→L0A/L0B→M→L0C→FIX→GM），16×16×16 | 代码完成，**待 NPU 验证** |
-| 02 | `csrc/examples/teaching/02_mmad_k_loop` | K 分块累加：`cmatrixInitVal` / `unitFlag` | 待加 |
+| 02 | `csrc/examples/teaching/02_mmad_k_loop` | K 分块累加：`cmatrixInitVal` / `unitFlag` / 反向同步 / strided 读（K=16 时等价于 01） | 代码完成，**待 NPU 验证** |
 | 03 | `csrc/examples/teaching/03_mmad_shapes` | M/N 非 16 倍数、多 fractal、stride | 待加 |
 | 04 | `csrc/examples/teaching/04_cube_vector` | cube→GM workspace→vector 的软流水（sparse_flash_mla 骨架） | 待加 |
 
@@ -445,7 +445,7 @@ L0B 拿到的 B 天然是"转置着放"的；反过来按 `[K,N]` 摆，算出�
 python3 setup.py --make-clean
 python3 setup.py --arch-version 2201 --ops apply_token_bitmask,teaching -j 16
 pip install --no-index --no-deps --force-reinstall output/sgl_kernel_npu-*.whl
-python3 csrc/examples/teaching/01_mmad_basic/run.py
+python3 csrc/examples/teaching/02_mmad_k_loop/run.py
 ```
 
 ### 9.4 待办事项

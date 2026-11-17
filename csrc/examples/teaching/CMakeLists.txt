@@ -10,6 +10,10 @@
 # --ops 的选择串为 key，多注册一个 ID 就必须 --make-clean。换例子时只改下面
 # 四个源文件路径，选择串保持 "apply_token_bitmask,teaching" 不变。
 #
+# 当前激活：02_mmad_k_loop（K 分块累加）。01_mmad_basic 的源码保留作阅读材料，
+# 想切回去把下面四处的 02_mmad_k_loop 改回 01_mmad_basic、文件名改回
+# torch_adapter.cpp / mmad_basic_op.cpp / mmad_basic_kernel.cpp 即可。
+#
 # 为什么源码必须放在 csrc/ 下（而不是仓库根的 teaching/）：
 #   csrc/cmake/cann_ops.cmake:198 用 ${CMAKE_CURRENT_SOURCE_DIR}（= csrc）当基准算
 #   kernel 目录的相对路径，随后 CANN 的 ascendc_copy_kernel_src.py 要把 kernel
@@ -23,10 +27,10 @@ sgl_register_operator(
     ID teaching
     EXECUTION_UNIT AICORE
     CANN_OP_TYPE SglTeaching
-    TORCH_ADAPTER ${CMAKE_CURRENT_LIST_DIR}/01_mmad_basic/op_host/torch_adapter.cpp
+    TORCH_ADAPTER ${CMAKE_CURRENT_LIST_DIR}/02_mmad_k_loop/op_host/torch_adapter.cpp
     SUPPORTED_ARCHS 2201
-    OPDEF_SOURCES ${CMAKE_CURRENT_LIST_DIR}/01_mmad_basic/op_host/mmad_basic_op.cpp
-    INFER_SOURCES ${CMAKE_CURRENT_LIST_DIR}/01_mmad_basic/op_host/mmad_basic_op.cpp
-    TILING_SOURCES ${CMAKE_CURRENT_LIST_DIR}/01_mmad_basic/op_host/mmad_basic_op.cpp
-    KERNEL_SOURCES ${CMAKE_CURRENT_LIST_DIR}/01_mmad_basic/op_kernel/mmad_basic_kernel.cpp
+    OPDEF_SOURCES ${CMAKE_CURRENT_LIST_DIR}/02_mmad_k_loop/op_host/mmad_kloop_op.cpp
+    INFER_SOURCES ${CMAKE_CURRENT_LIST_DIR}/02_mmad_k_loop/op_host/mmad_kloop_op.cpp
+    TILING_SOURCES ${CMAKE_CURRENT_LIST_DIR}/02_mmad_k_loop/op_host/mmad_kloop_op.cpp
+    KERNEL_SOURCES ${CMAKE_CURRENT_LIST_DIR}/02_mmad_k_loop/op_kernel/mmad_kloop_kernel.cpp
 )

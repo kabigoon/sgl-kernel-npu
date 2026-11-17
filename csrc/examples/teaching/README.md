@@ -8,7 +8,7 @@
 | 级别 | 目录 | 讲什么 | 状态 |
 |---|---|---|---|
 | 01 | `01_mmad_basic/` | 一条 `Mmad` 的五个阶段：GM→L1→L0A/L0B→(M)→L0C→GM，16×16×16 | ✅ 已有 |
-| 02 | `02_mmad_k_loop/` | K 方向分块累加：`cmatrixInitVal` / `unitFlag` / L0C 复用 | 待加 |
+| 02 | `02_mmad_k_loop/` | K 方向分块累加：`cmatrixInitVal` / `unitFlag` / 反向同步 / strided 读 | ✅ 已有（**当前激活**） |
 | 03 | `03_mmad_shapes/` | M/N 非 16 倍数、多 fractal、stride 与大 tile | 待加 |
 | 04 | `04_cube_vector/` | cube 出分数块 → GM workspace → vector 做 softmax（sparse_flash_mla 的骨架） | 待加 |
 
@@ -44,7 +44,7 @@ CANN 与 torch 两级的构建缓存都是拿 `--ops` 的选择串当 key（`bui
 - 只注册一个算子：ID `teaching` / OpType `SglTeaching`
 - 声明在 `csrc/examples/teaching/CMakeLists.txt`
 - **换例子 = 改那 4 个源文件路径**，选择串保持 `apply_token_bitmask,teaching` 不变
-- 一次只激活一个例子（同一个 ID 不能有两个实现）
+- 一次只激活一个例子（同一个 ID 不能有两个实现）；01 的源码保留作阅读材料
 
 **为什么源码在 `csrc/` 下而不是仓库根**：`csrc/cmake/cann_ops.cmake:198` 以 `csrc`
 为基准算 kernel 目录的相对路径，CANN 的 `ascendc_copy_kernel_src.py` 随后要把 kernel
@@ -64,7 +64,7 @@ python3 setup.py --arch-version 2201 --ops apply_token_bitmask,teaching -j 16
 
 pip install --no-index --no-deps --force-reinstall output/sgl_kernel_npu-*.whl
 
-python3 csrc/examples/teaching/01_mmad_basic/run.py
+python3 csrc/examples/teaching/02_mmad_k_loop/run.py
 ```
 
 之后再改这里的文件，**不需要再 `--make-clean`**，直接重跑 `setup.py`（它内部
