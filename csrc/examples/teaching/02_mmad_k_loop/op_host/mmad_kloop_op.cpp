@@ -31,11 +31,18 @@ static ge::graphStatus TilingMmadKLoop(gert::TilingContext *context)
         return ge::GRAPH_FAILED;
     }
 
+    // 注意：TilingContext::GetInputShape() 返回的是 gert::StorageShape*（包一层），
+    // 必须先 .GetStorageShape() 才拿到 gert::Shape；而 InferShapeContext 那边
+    // 直接返回 gert::Shape*。同一个函数名，两个 context 两种类型。
     const auto *aShape = context->GetInputShape(0);
-    if (aShape == nullptr || aShape->GetDimNum() != 2) {
+    if (aShape == nullptr) {
         return ge::GRAPH_FAILED;
     }
-    const int64_t kTotal = aShape->GetDim(1); // A 是 [M, K]，第 1 维就是 K
+    const auto &aDims = aShape->GetStorageShape();
+    if (aDims.GetDimNum() != 2) {
+        return ge::GRAPH_FAILED;
+    }
+    const int64_t kTotal = aDims.GetDim(1); // A 是 [M, K]，第 1 维就是 K
     if (kTotal <= 0 || kTotal % TILE_K != 0) {
         return ge::GRAPH_FAILED; // K 必须对齐到 16，否则一个 fractal 都凑不齐
     }
